@@ -3,113 +3,92 @@ import numpy as np
 from typing import Final
 import matplotlib.pyplot as plt
 import functools
+import csv
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+from mpl_toolkits.mplot3d import Axes3D
 
-# --- DEFINIÇÕES DO PROBLEMA (EXPANDIDO PARA 10 CIDADES) ---
+# --- Seus dados de CIDADES, TEMPO, PRECO_PEDAGIO permanecem os mesmos ---
 CIDADES: Final[int] = {
-    0: (0, 0),    # Cidade Original 0
-    1: (2, 4),    # Cidade Original 1
-    2: (5, 2),    # Cidade Original 2
-    3: (6, 6),    # Cidade Original 3
-    4: (8, 3),    # Cidade Original 4
-    5: (10, 8),   # Nova Cidade 5
-    6: (3, 9),    # Nova Cidade 6
-    7: (12, 1),   # Nova Cidade 7
-    8: (9, 11),   # Nova Cidade 8
-    9: (1, 12)    # Nova Cidade 9
+    0: (5, 5), 1: (10, 12), 2: (15, 8), 3: (8, 15), 4: (90, 5),
+    5: (85, 80), 6: (5, 80), 7: (45, 50), 8: (50, 45), 9: (20, 95)
 }
-
-# Matriz de Tempo de locomoção entre cidades (Horas) - expandida para 10x10
+# ... (TEMPO e PRECO_PEDAGIO aqui)
 TEMPO: Final = (
     #      0     1     2     3     4      5     6     7     8      9
-    (None, 3,    1.5,  2,    9,     6,    4,    8.5,  11,    12.5), # 0
-    (3,    None, 1,    15,   5,     7,    5,    10,   8,     10),   # 1
-    (1.5,  1,    None, 7,    2.5,   4.5,  6,    5,    9,     11),   # 2
-    (2,    15,   7,    None, 1,     8,    3.5,  12,   4,     9.5),  # 3
-    (9,    5,    2.5,  1,    None,  2,    9,    4,    6,     13),   # 4
-    (6,    7,    4.5,  8,    2,     None, 10,   3,    2.5,   14),   # 5
-    (4,    5,    6,    3.5,  9,     10,   None, 14,   5,     4),    # 6
-    (8.5,  10,   5,    12,   4,     3,    14,   None, 9,     16),   # 7
-    (11,   8,    9,    4,    6,     2.5,  5,    9,    None,  3),    # 8
-    (12.5, 10,   11,   9.5,  13,    14,   4,    16,   3,     None)   # 9
+    (None, 2.0,  3.0,  2.5,  15.0,  25.0,  18.0,  8.0,   9.0,   22.0), # 0
+    (2.0,  None, 5.0,  8.0,  14.0,  23.0,  19.0,  7.0,   8.0,   20.0), # 1
+    (3.0,  5.0,  None, 4.0,  12.0,  21.0,  22.0,  6.0,   7.0,   24.0), # 2
+    (2.5,  8.0,  4.0,  None, 16.0,  24.0,  17.0,  7.5,   8.5,   18.0), # 3
+    (15.0, 14.0, 12.0, 16.0, None,  10.0,  28.0,  9.0,   10.0,  30.0), # 4
+    (25.0, 23.0, 21.0, 24.0, 10.0,  None,  15.0,  11.0,  10.0,  12.0), # 5
+    (18.0, 19.0, 22.0, 17.0, 28.0,  15.0,  None,  12.0,  13.0,  3.0),  # 6
+    (8.0,  7.0,  6.0,  7.5,  9.0,   11.0,  12.0,  None,  1.0,   14.0), # 7
+    (9.0,  8.0,  7.0,  8.5,  10.0,  10.0,  13.0,  1.0,   None,  13.0), # 8
+    (22.0, 20.0, 24.0, 18.0, 30.0,  12.0,  3.0,   14.0,  13.0,  None)  # 9
 )
 
-# Matriz de Custo de Pedágio entre cidades - expandida para 10x10
 PRECO_PEDAGIO: Final = (
-    #      0     1     2     3     4      5     6     7     8     9
-    (None, 10,   5,    7,    2,     12,   8,    15,   20,   22),   # 0
-    (10,   None, 3,    15,   2,     9,    6,    18,   14,   19),   # 1
-    (5,    3,    None, 4,    8,     6,    10,   9,    16,   20),   # 2
-    (7,    15,   4,    None, 11,    14,   5,    21,   7,    17),   # 3
-    (2,    2,    8,    11,   None,  4,    13,   6,    10,   23),   # 4
-    (12,   9,    6,    14,   4,     None, 16,   5,    8,    25),   # 5
-    (8,    6,    10,   5,    13,    16,   None, 24,   9,    7),    # 6
-    (15,   18,   9,    21,   6,     5,    24,   None, 17,   28),   # 7
-    (20,   14,   16,   7,    10,    8,    9,    17,   None,  6),    # 8
-    (22,   19,   20,   17,   23,    25,   7,    28,   6,    None)    # 9
+    #      0     1     2     3     4      5     6     7     8      9
+    (None, 5,    8,    7,    80,    100,   10,    20,    22,    15),   # 0
+    (5,    None, 15,   5,    70,    90,    25,    30,    35,    28),   # 1
+    (8,    15,   None, 12,   60,    80,    30,    25,    28,    32),   # 2
+    (7,    5,    12,   None, 75,    95,    20,    32,    38,    22),   # 3
+    (80,   70,   60,   75,   None,  90,    5,     40,    45,    10),   # 4
+    (100,  90,   80,   95,   90,    None,  110,   50,    48,    120),  # 5
+    (10,   25,   30,   20,   5,     110,   None,  40,    42,    0),    # 6
+    (20,   30,   25,   32,   40,    50,    40,    None,  0,     55),   # 7
+    (22,   35,   28,   38,   45,    48,    42,    0,     None,  58),   # 8
+    (15,   28,   32,   22,   10,    120,   0,     55,    58,    None)  # 9
 )
 
 # --- PARÂMETROS DO ALGORITMO ---
 TAM_CROMO: Final[int] = len(CIDADES)
-TAM_POP: Final[int] = TAM_CROMO * 10  # Aumentar a população é bom para diversidade
-NUM_GERACOES: Final[int] = 1000
+TAM_POP: Final[int] = TAM_CROMO * 10
+NUM_GERACOES: Final[int] = 500
 TAXA_MUTACAO: Final[float] = 0.03
+contador_estagnacao = 0
+GERACOES_PARA_PARAR = 50 
 
-
-# --- BLOCO PRINCIPAL DE EXECUÇÃO ---
 if __name__ == '__main__':
 
     # --- 1. INICIALIZAÇÃO ---
-    import csv
-    import matplotlib.pyplot as plt
-    import matplotlib.cm as cm # Importa o módulo de mapas de cores
-
     populacao = np.zeros((TAM_POP, TAM_CROMO), dtype=int)
     nota_populacao = np.zeros((TAM_POP, 6))
-    
     iniciaPopulacao(populacao)
     print("--- POPULAÇÃO INICIAL GERADA ---")
     
-    # --- DADOS PARA O GRÁFICO ---
-    # Agora vamos guardar a fronteira de CADA geração
+    # ### Pré-avalia a população inicial antes de entrar no loop
+    calculoNotas(populacao, nota_populacao)
+    
     historico_plot = []
 
-    # --- ABERTURA DO ARQUIVO CSV ---
     with open('historico_fronteiras.csv', 'w', newline='') as csvfile:
         csv_writer = csv.writer(csvfile)
         csv_writer.writerow(['Geracao', 'ID_Original', 'Cromossomo', 'Distancia_KM', 'Tempo_H', 'Pedagio_R$'])
 
-        # --- 2. LOOP EVOLUTIVO ---
         for geracao in range(NUM_GERACOES):
-            # (O print foi movido para o final do loop para não poluir a saída)
+            # ### PASSO 1: CRIAÇÃO DE FILHOS (Q) A PARTIR DA POPULAÇÃO ATUAL (P)
             
-            # ETAPA A: AVALIAÇÃO
-            calculoNotas(populacao, nota_populacao)
-            
-            # ETAPA B: RANQUEAMENTO
+            # Ordena a população de pais (P) para usar na seleção por torneio
             ranks, fronts = calculoFronteDePareto(nota_populacao, TAM_POP)
-            
-            # ETAPA C: DIVERSIDADE
             crowding_distances = calculate_crowding_metrics(nota_populacao, fronts)
-            
-            if (geracao + 1) % 10 == 0 or geracao == 0: # Imprime o status a cada 10 gerações
+            if fronts[0] == 100:
+                break
+            if (geracao + 1) % 10 == 0 or geracao == 0:
                  print(f"\rProcessando Geração {geracao+1}/{NUM_GERACOES} | Membros na Fronteira: {len(fronts[0])}", end="")
 
-            # --- SALVANDO DADOS DA GERAÇÃO ATUAL ---
             melhores_indices_geracao = fronts[0]
-            
-            # Salva os dados no CSV
             for idx in melhores_indices_geracao:
                 rota_str = " - ".join([str(int(c)) for c in populacao[idx]])
                 dist = nota_populacao[idx, 2]
                 tempo = nota_populacao[idx, 3]
                 custo = nota_populacao[idx, 4]
                 csv_writer.writerow([geracao + 1, idx, rota_str, f"{dist:.2f}", f"{tempo:.2f}", f"{custo:.2f}"])
+            historico_plot.append(nota_populacao[melhores_indices_geracao, 2:5])
 
-            # Salva a fronteira para o gráfico final
-            historico_plot.append(nota_populacao[melhores_indices_geracao, 2:4])
-
-            # ETAPA D: CRIAÇÃO DA NOVA GERAÇÃO
-            nova_populacao = np.zeros_like(populacao)
+            # Cria a população de filhos (Q)
+            populacao_filhos = np.zeros_like(populacao)
             for i in range(TAM_POP):
                 idx_pai1 = selecao_NSGA2(ranks, crowding_distances)
                 idx_pai2 = selecao_NSGA2(ranks, crowding_distances)
@@ -117,40 +96,124 @@ if __name__ == '__main__':
                 pai2 = populacao[idx_pai2]
                 filho = crossoverOX(pai1, pai2, TAM_CROMO)
                 filho = mutacao_swap(filho, TAXA_MUTACAO)
-                nova_populacao[i] = filho
+                populacao_filhos[i] = filho
             
-            # ETAPA E: SUBSTITUIÇÃO
-            populacao = nova_populacao
+            # ### PASSO 2: COMBINAÇÃO DE PAIS E FILHOS (R = P U Q)
+            # ### AQUI ACONTECE A "REALIMENTAÇÃO". Pais e filhos são colocados juntos.
+            populacao_combinada = np.vstack([populacao, populacao_filhos])
+            
+            # Avalia os objetivos para a população combinada de tamanho 2*N
+            nota_populacao_combinada = np.zeros((TAM_POP * 2, 6))
+            calculoNotas(populacao_combinada, nota_populacao_combinada)
 
-    print("\n\nEvolução concluída.")
-    # --- 3. RESULTADO FINAL (A última fronteira encontrada) ---
-    fronteira_final = historico_plot[-1]
-    # (A impressão da tabela final já é feita pelo gráfico e CSV)
+            # ### PASSO 3: ORDENAÇÃO DA POPULAÇÃO COMBINADA (R)
+            ranks_combinados, fronts_combinados = calculoFronteDePareto(nota_populacao_combinada, TAM_POP * 2)
+            crowding_combinados = calculate_crowding_metrics(nota_populacao_combinada, fronts_combinados)
+            if len(fronts[0]) == TAM_POP:
+                contador_estagnacao += 1
+            else:
+                contador_estagnacao = 0 # Reseta o contador se a condição for quebrada
 
-    # --- 4. GERAÇÃO DO GRÁFICO DE CONVERGÊNCIA ---
-    print("Gerando gráfico de convergência...")
-    plt.figure(figsize=(14, 9))
-    
-    # Define o mapa de cores que vai do azul (início) ao vermelho (fim)
-    cores = cm.viridis(np.linspace(0, 1, len(historico_plot)))
+            if contador_estagnacao >= GERACOES_PARA_PARAR:
+                print(f"\nParando na Geração {geracao+1} devido à estagnação da fronteira por {GERACOES_PARA_PARAR} gerações.")
+                break
+            # ### PASSO 4: SELEÇÃO DOS SOBREVIVENTES PARA A PRÓXIMA GERAÇÃO
+            proxima_populacao = np.zeros_like(populacao)
+            proxima_nota_populacao = np.zeros_like(nota_populacao)
+            
+            prox_idx_livre = 0
+            front_num = 0
+            
+            # Preenche a nova população com as fronteiras, em ordem, até o limite de TAM_POP
+            while prox_idx_livre < TAM_POP:
+                indices_da_fronteira_atual = fronts_combinados[front_num]
+                
+                # Se a fronteira inteira não couber, precisaremos selecionar os mais diversos
+                if prox_idx_livre + len(indices_da_fronteira_atual) > TAM_POP:
+                    break 
+                
+                # Adiciona todos os indivíduos da fronteira atual
+                for idx in indices_da_fronteira_atual:
+                    proxima_populacao[prox_idx_livre] = populacao_combinada[idx]
+                    proxima_nota_populacao[prox_idx_livre] = nota_populacao_combinada[idx]
+                    prox_idx_livre += 1
+                front_num += 1
+            
 
-    # Plota a fronteira de cada geração com uma cor diferente e transparência
+            # Se ainda houver espaço, preenche com os melhores da próxima fronteira (a que não coube)
+            if prox_idx_livre < TAM_POP:
+                ultima_fronteira = fronts_combinados[front_num]
+                
+                # Obtém a distância de aglomeração apenas dos indivíduos dessa última fronteira
+                crowding_da_fronteira = crowding_combinados[ultima_fronteira]
+                
+                # Ordena os índices da fronteira pela maior distância (descendente)
+                indices_ordenados = np.argsort(-crowding_da_fronteira) # Negativo para ordem decrescente
+                
+                # Preenche o restante da população com os indivíduos mais diversos da última fronteira
+                for i in range(TAM_POP - prox_idx_livre):
+                    idx_original_na_comb = ultima_fronteira[indices_ordenados[i]]
+                    proxima_populacao[prox_idx_livre + i] = populacao_combinada[idx_original_na_comb]
+                    proxima_nota_populacao[prox_idx_livre + i] = nota_populacao_combinada[idx_original_na_comb]
+
+            # ### PASSO 5: ATUALIZAÇÃO FINAL
+            # A população de sobreviventes se torna a população de pais para a próxima geração
+            populacao = proxima_populacao
+            nota_populacao = proxima_nota_populacao
+
+        print("\n--- MELHORES SOLUÇÕES ENCONTRADAS (Fronteira de Pareto da Geração Final) ---")
+
+        # As variáveis `populacao` e `nota_populacao` já contêm os dados da última geração.
+        # Apenas precisamos extrair a primeira fronteira (rank 0).
+        final_ranks, final_fronts = calculoFronteDePareto(nota_populacao, TAM_POP)
+        melhores_indices_finais = final_fronts[0]
+
+        # Prepara os dados para a exibição em tabela
+        headers = ["ID na Pop. Final", "Rota (Cromossomo)", "Distância (KM)", "Tempo (H)", "Pedágio (R$)"]
+        table_data = []
+
+        for idx in melhores_indices_finais:
+                # Cria uma string mais clara para a rota, mostrando o retorno à origem
+                cromossomo = populacao[idx]
+                rota_str = " -> ".join(map(str, cromossomo)) + f" -> {cromossomo[0]}"
+
+                # Pega os valores dos objetivos
+                dist = nota_populacao[idx, 2]
+                tempo = nota_populacao[idx, 3]
+                custo = nota_populacao[idx, 4]
+
+                table_data.append([
+                        idx,
+                        rota_str,
+                        f"{dist:.2f}",
+                        f"{tempo:.2f}",
+                        f"{custo:.2f}"
+                ])
+
+        # Imprime a tabela formatada
+        print(tabulate(table_data, headers=headers, tablefmt="grid"))
+        #print(f'Dentre os 3 objetivos, temos na população final, o melhor para cada um deles:\n menor distância: {historico_plot}')
+
+    # --- Seu código para gerar o gráfico permanece exatamente o mesmo ---
+    fig = plt.figure(figsize=(15, 12))
+    ax = fig.add_subplot(111, projection='3d')
+    cores = cm.viridis(np.linspace(0, 1, NUM_GERACOES))
     for i, fronteira in enumerate(historico_plot):
         if len(fronteira) > 0:
-            distancias = fronteira[:, 0]
-            tempos = fronteira[:, 1]
-            plt.scatter(distancias, tempos, color=cores[i], alpha=0.5, s=15)
-
-    # Destaca a primeira e a última fronteira para clareza
-    if len(historico_plot[0]) > 0:
-        plt.scatter(historico_plot[0][:, 0], historico_plot[0][:, 1], color='cyan', s=100, marker='o', label='Geração 1', zorder=10)
+            ax.scatter(fronteira[:, 0], fronteira[:, 1], fronteira[:, 2], color=cores[i], alpha=0.4, s=15)
+    fronteira_inicial = historico_plot[0]
+    fronteira_final = historico_plot[-1]
+    if len(fronteira_inicial) > 0:
+        ax.scatter(fronteira_inicial[:, 0], fronteira_inicial[:, 1], fronteira_inicial[:, 2], 
+                   color='cyan', s=150, marker='o', label='Geração 1', depthshade=False, zorder=10)
     if len(fronteira_final) > 0:
-        plt.scatter(fronteira_final[:, 0], fronteira_final[:, 1], color='red', s=100, marker='X', label=f'Geração Final ({NUM_GERACOES})', zorder=10)
-
-    plt.title('Convergência da Fronteira de Pareto (NSGA-II)', fontsize=16)
-    plt.xlabel('Distância Total (KM)', fontsize=12)
-    plt.ylabel('Tempo Total (H)', fontsize=12)
-    plt.legend()
-    plt.grid(True)
-    plt.savefig('convergencia_pareto_completa.png')
+        ax.scatter(fronteira_final[:, 0], fronteira_final[:, 1], fronteira_final[:, 2], 
+                   color='red', s=150, marker='X', label=f'Geração Final ({NUM_GERACOES})', depthshade=False, zorder=10)
+    ax.set_title('Convergência da Fronteira de Pareto 3D (NSGA-II)', fontsize=16)
+    ax.set_xlabel('Distância Total (KM)', fontsize=12)
+    ax.set_ylabel('Tempo Total (H)', fontsize=12)
+    ax.set_zlabel('Custo Pedágio (R$)', fontsize=12)
+    ax.legend()
+    ax.view_init(elev=20, azim=45)
+    plt.savefig('convergencia_pareto_todas_geracoes.png')
     plt.show()

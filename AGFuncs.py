@@ -3,67 +3,62 @@ import random
 import numpy as np
 from typing import Final
 from tabulate import tabulate
-from numba import njit
 
-# --- DEFINIÇÕES DO PROBLEMA (EXPANDIDO PARA 10 CIDADES) ---
 CIDADES: Final[int] = {
-    0: (0, 0),    # Cidade Original 0
-    1: (2, 4),    # Cidade Original 1
-    2: (5, 2),    # Cidade Original 2
-    3: (6, 6),    # Cidade Original 3
-    4: (8, 3),    # Cidade Original 4
-    5: (10, 8),   # Nova Cidade 5
-    6: (3, 9),    # Nova Cidade 6
-    7: (12, 1),   # Nova Cidade 7
-    8: (9, 11),   # Nova Cidade 8
-    9: (1, 12)    # Nova Cidade 9
+    0: (5, 5),
+    1: (10, 12),
+    2: (15, 8),
+    3: (8, 15),
+    4: (90, 5),
+    5: (85, 80), 
+    6: (5, 80), 
+    7: (45, 50),
+    8: (50, 45),
+    9: (20, 95)
 }
 
-# Matriz de Tempo de locomoção entre cidades (Horas) - expandida para 10x10
 TEMPO: Final = (
     #      0     1     2     3     4      5     6     7     8      9
-    (None, 3,    1.5,  2,    9,     6,    4,    8.5,  11,    12.5), # 0
-    (3,    None, 1,    15,   5,     7,    5,    10,   8,     10),   # 1
-    (1.5,  1,    None, 7,    2.5,   4.5,  6,    5,    9,     11),   # 2
-    (2,    15,   7,    None, 1,     8,    3.5,  12,   4,     9.5),  # 3
-    (9,    5,    2.5,  1,    None,  2,    9,    4,    6,     13),   # 4
-    (6,    7,    4.5,  8,    2,     None, 10,   3,    2.5,   14),   # 5
-    (4,    5,    6,    3.5,  9,     10,   None, 14,   5,     4),    # 6
-    (8.5,  10,   5,    12,   4,     3,    14,   None, 9,     16),   # 7
-    (11,   8,    9,    4,    6,     2.5,  5,    9,    None,  3),    # 8
-    (12.5, 10,   11,   9.5,  13,    14,   4,    16,   3,     None)   # 9
+    (None, 2.0,  3.0,  2.5,  15.0,  25.0,  18.0,  8.0,   9.0,   22.0), # 0
+    (2.0,  None, 5.0,  8.0,  14.0,  23.0,  19.0,  7.0,   8.0,   20.0), # 1
+    (3.0,  5.0,  None, 4.0,  12.0,  21.0,  22.0,  6.0,   7.0,   24.0), # 2
+    (2.5,  8.0,  4.0,  None, 16.0,  24.0,  17.0,  7.5,   8.5,   18.0), # 3
+    (15.0, 14.0, 12.0, 16.0, None,  10.0,  28.0,  9.0,   10.0,  30.0), # 4
+    (25.0, 23.0, 21.0, 24.0, 10.0,  None,  15.0,  11.0,  10.0,  12.0), # 5
+    (18.0, 19.0, 22.0, 17.0, 28.0,  15.0,  None,  12.0,  13.0,  3.0),  # 6
+    (8.0,  7.0,  6.0,  7.5,  9.0,   11.0,  12.0,  None,  1.0,   14.0), # 7
+    (9.0,  8.0,  7.0,  8.5,  10.0,  10.0,  13.0,  1.0,   None,  13.0), # 8
+    (22.0, 20.0, 24.0, 18.0, 30.0,  12.0,  3.0,   14.0,  13.0,  None)  # 9
 )
 
-# Matriz de Custo de Pedágio entre cidades - expandida para 10x10
 PRECO_PEDAGIO: Final = (
-    #      0     1     2     3     4      5     6     7     8     9
-    (None, 10,   5,    7,    2,     12,   8,    15,   20,   22),   # 0
-    (10,   None, 3,    15,   2,     9,    6,    18,   14,   19),   # 1
-    (5,    3,    None, 4,    8,     6,    10,   9,    16,   20),   # 2
-    (7,    15,   4,    None, 11,    14,   5,    21,   7,    17),   # 3
-    (2,    2,    8,    11,   None,  4,    13,   6,    10,   23),   # 4
-    (12,   9,    6,    14,   4,     None, 16,   5,    8,    25),   # 5
-    (8,    6,    10,   5,    13,    16,   None, 24,   9,    7),    # 6
-    (15,   18,   9,    21,   6,     5,    24,   None, 17,   28),   # 7
-    (20,   14,   16,   7,    10,    8,    9,    17,   None,  6),    # 8
-    (22,   19,   20,   17,   23,    25,   7,    28,   6,    None)    # 9
+    #      0     1     2     3     4      5     6     7     8      9
+    (None, 5,    8,    7,    80,    100,   10,    20,    22,    15),   # 0
+    (5,    None, 15,   5,    70,    90,    25,    30,    35,    28),   # 1
+    (8,    15,   None, 12,   60,    80,    30,    25,    28,    32),   # 2
+    (7,    5,    12,   None, 75,    95,    20,    32,    38,    22),   # 3
+    (80,   70,   60,   75,   None,  90,    5,     40,    45,    10),   # 4
+    (100,  90,   80,   95,   90,    None,  110,   50,    48,    120),  # 5
+    (10,   25,   30,   20,   5,     110,   None,  40,    42,    0),    # 6
+    (20,   30,   25,   32,   40,    50,    40,    None,  0,     55),   # 7
+    (22,   35,   28,   38,   45,    48,    42,    0,     None,  58),   # 8
+    (15,   28,   32,   22,   10,    120,   0,     55,    58,    None)  # 9
 )
 
-@njit
 def iniciaPopulacao(populacao):
     # Cria o conjunto de população com valores aleatorios
     for i in range(len(populacao)):
         populacao[i] = np.random.permutation(len(CIDADES))
 
 # Calculo feito da distancia entre 2 cidades, cidadem1 e 2, depois eleva ambos ao quadrado pra retirar qual
-@njit
+
 def distancia(cidade1, cidade2):
     x1, y1 = CIDADES[(cidade1)]
     x2, y2 = CIDADES[(cidade2)]
     return np.sqrt((x2 - x1)**2 + (y2 - y1)**2)
 
 # Distancia total do percurso de cada cromossomo
-@njit
+
 def distanciaTotal(cromossomo):
     total = 0
     for i in range(len(cromossomo) - 1):
@@ -72,7 +67,7 @@ def distanciaTotal(cromossomo):
     total += distancia(cromossomo[-1], cromossomo[0])
     return total
 
-@njit
+
 def tempoTotal(cromossomo):
     total = 0
     for i in range(len(cromossomo) - 1):
@@ -81,7 +76,7 @@ def tempoTotal(cromossomo):
     total += TEMPO[int(cromossomo[-1])][int(cromossomo[0])]
     return total
 
-@njit
+
 def custoPedagio(cromossomo):
     total = 0
     for i in range(len(cromossomo) - 1):
@@ -99,7 +94,7 @@ def custoPedagio(cromossomo):
 # [i][5] -> percentual de seleção
 
 # Fitness de cada cromossomo, por enquanto apenas distancia
-@njit
+
 def calculoNotas(populacao, nota_populacao):
     for i in range(len(populacao)):
         nota_populacao[i, 0] = i
@@ -107,13 +102,13 @@ def calculoNotas(populacao, nota_populacao):
         nota_populacao[i, 3] = tempoTotal(populacao[i])
         nota_populacao[i, 4] = custoPedagio(populacao[i])
 
-@njit
+
 def domina(indice_a, indice_b, nota_populacao):
     objetivos_a = nota_populacao[indice_a, 2:5]
     objetivos_b = nota_populacao[indice_b, 2:5]
     return np.all(objetivos_a <= objetivos_b) and np.any(objetivos_a < objetivos_b)
 
-@njit
+
 def calculoFronteDePareto(nota_populacao, TAM_POP):
     domination_counts = np.zeros(TAM_POP, dtype=int)
     dominated_solutions = [[] for _ in range(TAM_POP)]
@@ -150,7 +145,7 @@ def calculoFronteDePareto(nota_populacao, TAM_POP):
             
     return ranks, fronts
 
-@njit
+
 def calculate_crowding_metrics(nota_populacao, fronts):
     """
     Calcula a distância de aglomeração para cada indivíduo para manter a diversidade.
@@ -188,7 +183,7 @@ def calculate_crowding_metrics(nota_populacao, fronts):
                     
     return crowding_metrics
 
-@njit
+
 def selecao_NSGA2(ranks, crowding_metrics, k=2):
     """
     Seleciona o índice de um indivíduo usando Torneio Binário.
@@ -214,7 +209,7 @@ def selecao_NSGA2(ranks, crowding_metrics, k=2):
     else:
         return idx2
 
-@njit
+
 def mutacao_swap(cromossomo, taxa_mutacao=0.1):
     """
     Aplica mutação trocando a posição de duas cidades.
@@ -224,7 +219,7 @@ def mutacao_swap(cromossomo, taxa_mutacao=0.1):
         cromossomo[idx1], cromossomo[idx2] = cromossomo[idx2], cromossomo[idx1]
     return cromossomo
 
-@njit
+
 def crossoverOX(pai1, pai2, TAM_CROMO):
     # -1 indica posição vazia
     filho = np.full(TAM_CROMO, -1)  
@@ -244,7 +239,6 @@ def crossoverOX(pai1, pai2, TAM_CROMO):
     
     return filho
 
-@njit
 def printPopulacao(populacao, notaPopulacao):
     headers = ["ID", "CROMOSSOMO", "DISTÂNCIA", "TEMPO", "PEDÁGIO"]
     table_data = []
