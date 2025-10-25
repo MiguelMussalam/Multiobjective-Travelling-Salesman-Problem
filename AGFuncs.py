@@ -36,7 +36,7 @@ for i in range(len(CIDADES)):
             TEMPO[i][j] = None
         else:
             dist = distancia(i, j)
-            ruido = np.random.uniform(0.9, 1.1)
+            ruido = np.random.uniform(0.06, 0.7)
             TEMPO[i][j] = dist * ruido
 
 PRECO_PEDAGIO = np.zeros((len(CIDADES), len(CIDADES)))
@@ -47,7 +47,7 @@ for i in range(len(CIDADES)):
             PRECO_PEDAGIO[i][j] = None
         else:
             dist = distancia(i, j)
-            fator_aleatorio = np.random.uniform(0.8, 1.5)
+            fator_aleatorio = np.random.uniform(0.06, 0.4)
             PRECO_PEDAGIO[i][j] = max(5, min(150, dist * 0.5 * fator_aleatorio))
 
 # Distancia total do percurso de cada cromossomo
@@ -123,7 +123,6 @@ def calculoFronteDePareto(nota_populacao, TAM_POP):
             fronts[0].append(i)
             
     rank_atual = 0
-    # --- A CORREÇÃO ESTÁ NESTA LINHA ---
     while rank_atual < len(fronts):
         next_front = []
         for i in fronts[rank_atual]:
@@ -140,26 +139,21 @@ def calculoFronteDePareto(nota_populacao, TAM_POP):
 
 
 def calculate_crowding_metrics(nota_populacao, fronts):
-    """
-    Calcula a distância de aglomeração para cada indivíduo para manter a diversidade.
-    """
     num_individuals = len(nota_populacao)
     crowding_metrics = np.zeros(num_individuals)
     
-    objetivos = nota_populacao[:, 2:5] # Colunas de distancia, tempo, pedagio
+    objetivos = nota_populacao[:, 2:5]
     num_objectives = objetivos.shape[1]
 
     for front in fronts:
-        if not front: continue # Pula se a fronteira estiver vazia
+        if not front: continue
         
         front_objetivos = objetivos[front, :]
         
         for m in range(num_objectives):
-            # Ordena a fronteira com base no objetivo atual
             sorted_indices = np.argsort(front_objetivos[:, m])
             sorted_front = np.array(front)[sorted_indices]
             
-            # Atribui distância infinita aos extremos da fronteira
             crowding_metrics[sorted_front[0]] = np.inf
             crowding_metrics[sorted_front[-1]] = np.inf
             
@@ -167,9 +161,8 @@ def calculate_crowding_metrics(nota_populacao, fronts):
                 min_obj = front_objetivos[sorted_indices[0], m]
                 max_obj = front_objetivos[sorted_indices[-1], m]
                 range_obj = max_obj - min_obj
-                if range_obj == 0: continue # Evita divisão por zero
+                if range_obj == 0: continue
 
-                # Calcula a distância para os pontos intermediários
                 for i in range(1, len(sorted_front) - 1):
                     dist = objetivos[sorted_front[i+1], m] - objetivos[sorted_front[i-1], m]
                     crowding_metrics[sorted_front[i]] += dist / range_obj
@@ -178,10 +171,6 @@ def calculate_crowding_metrics(nota_populacao, fronts):
 
 
 def selecao_NSGA2(ranks, crowding_metrics, k=2):
-    """
-    Seleciona o índice de um indivíduo usando Torneio Binário.
-    Critérios: 1. Melhor Rank de Pareto, 2. Maior Crowding Distance (desempate).
-    """
     pop_size = len(ranks)
     
     # Sorteia k competidores (k=2 para torneio binário)
@@ -190,13 +179,11 @@ def selecao_NSGA2(ranks, crowding_metrics, k=2):
     idx1 = candidatos_indices[0]
     idx2 = candidatos_indices[1]
     
-    # Critério 1: O indivíduo com o menor rank de Pareto vence
     if ranks[idx1] < ranks[idx2]:
         return idx1
     elif ranks[idx2] < ranks[idx1]:
         return idx2
     
-    # Critério 2 (desempate): O indivíduo com a maior crowding distance vence
     if crowding_metrics[idx1] > crowding_metrics[idx2]:
         return idx1
     else:
@@ -204,9 +191,6 @@ def selecao_NSGA2(ranks, crowding_metrics, k=2):
 
 
 def mutacao_swap(cromossomo, TAXA_MUTACAO):
-    """
-    Aplica mutação trocando a posição de duas cidades.
-    """
     if random.random() < TAXA_MUTACAO:
         idx1, idx2 = np.random.choice(len(cromossomo), 2, replace=False)
         cromossomo[idx1], cromossomo[idx2] = cromossomo[idx2], cromossomo[idx1]
@@ -214,16 +198,12 @@ def mutacao_swap(cromossomo, TAXA_MUTACAO):
 
 
 def crossoverOX(pai1, pai2, TAM_CROMO):
-    # -1 indica posição vazia
     filho = np.full(TAM_CROMO, -1)  
 
-    # Escolhe aleatoriamente um segmento
     start, end = sorted(np.random.randint(0, len(CIDADES), 2))
     
-    # Copia segmento do pai1 para o filho
     filho[start:end+1] = pai1[start:end+1]
     
-    # Preenche o restante com a ordem do pai2, sem repetir cidades
     pos_filho = (end+1) % len(CIDADES)
     for c in pai2:
         if c not in filho:
@@ -244,5 +224,31 @@ def printPopulacao(populacao, notaPopulacao):
         table_data.append([i, rota_str, f"{distancia:.2f}KM", f"{tempo:.2f}H", f"{custo:.2f}R$"])
 
     print("\nPOPULAÇÃO ATUAL:")
-    # A mágica acontece aqui!
     print(tabulate(table_data, headers=headers, tablefmt="grid"))
+
+def print_fronteira_geracao(geracao, populacao, nota_populacao, fronts):
+    print(f"\n\n--- FRONTEIRA DE PARETO | GERAÇÃO {geracao} ---")
+
+    melhores_indices = fronts[0]
+    
+    headers = ["ID na Pop.", "Rota (Cromossomo)", "Distância (KM)", "Tempo (H)", "Pedágio (R$)"]
+    table_data = []
+
+    for idx in melhores_indices:
+        cromossomo = populacao[idx]
+        rota_str = " -> ".join(map(str, cromossomo[:10])) + f"... -> {cromossomo[0]}"
+        
+        dist = nota_populacao[idx, 2]
+        tempo = nota_populacao[idx, 3]
+        custo = nota_populacao[idx, 4]
+        
+        table_data.append([
+            idx,
+            rota_str,
+            f"{dist:.2f}",
+            f"{tempo:.2f}",
+            f"{custo:.2f}"
+        ])
+
+    print(tabulate(table_data, headers=headers, tablefmt="grid"))
+    print()
