@@ -15,7 +15,7 @@ CIDADES: Final[dict] = {
     35: (12, 35), 36: (32, 45), 37: (52, 55), 38: (72, 75), 39: (92, 85),
     40: (18, 75), 41: (38, 65), 42: (58, 35), 43: (78, 55), 44: (98, 25),
     45: (22, 85), 46: (42, 15), 47: (62, 85), 48: (82, 5), 49: (95, 95)
-}
+}   
 
 def iniciaPopulacao(populacao):
     # Cria o conjunto de população com valores aleatorios
@@ -29,9 +29,9 @@ def distancia(cidade1, cidade2):
     x2, y2 = CIDADES[(cidade2)]
     return np.sqrt((x2 - x1)**2 + (y2 - y1)**2)
 
-TEMPO = np.zeros((50, 50))
-for i in range(50):
-    for j in range(50):
+TEMPO = np.zeros((len(CIDADES), len(CIDADES)))
+for i in range(len(CIDADES)):
+    for j in range(len(CIDADES)):
         if i == j:
             TEMPO[i][j] = None
         else:
@@ -39,9 +39,10 @@ for i in range(50):
             ruido = np.random.uniform(0.9, 1.1)
             TEMPO[i][j] = dist * ruido
 
-PRECO_PEDAGIO = np.zeros((50, 50))
-for i in range(50):
-    for j in range(50):
+PRECO_PEDAGIO = np.zeros((len(CIDADES), len(CIDADES)))
+
+for i in range(len(CIDADES)):
+    for j in range(len(CIDADES)):
         if i == j:
             PRECO_PEDAGIO[i][j] = None
         else:
@@ -202,11 +203,11 @@ def selecao_NSGA2(ranks, crowding_metrics, k=2):
         return idx2
 
 
-def mutacao_swap(cromossomo, taxa_mutacao=0.1):
+def mutacao_swap(cromossomo, TAXA_MUTACAO):
     """
     Aplica mutação trocando a posição de duas cidades.
     """
-    if random.random() < taxa_mutacao:
+    if random.random() < TAXA_MUTACAO:
         idx1, idx2 = np.random.choice(len(cromossomo), 2, replace=False)
         cromossomo[idx1], cromossomo[idx2] = cromossomo[idx2], cromossomo[idx1]
     return cromossomo

@@ -160,7 +160,6 @@ if __name__ == '__main__':
         print(tabulate(table_data, headers=headers, tablefmt="grid"))
         #print(f'Dentre os 3 objetivos, temos na população final, o melhor para cada um deles:\n menor distância: {historico_plot}')
 
-    # --- Seu código para gerar o gráfico permanece exatamente o mesmo ---
     fig = plt.figure(figsize=(15, 12))
     ax = fig.add_subplot(111, projection='3d')
     cores = cm.viridis(np.linspace(0, 1, NUM_GERACOES))
@@ -182,4 +181,76 @@ if __name__ == '__main__':
     ax.legend()
     ax.view_init(elev=20, azim=45)
     plt.savefig('convergencia_pareto_todas_geracoes.png')
+    plt.figure(figsize=(18, 12))
+
+    # Gráfico 1: Distância vs Tempo
+    plt.subplot(2, 2, 1)
+    for i, fronteira in enumerate(historico_plot):
+        if len(fronteira) > 0:
+            plt.scatter(fronteira[:, 0], fronteira[:, 1], color=cores[i], alpha=0.4, s=15)
+    if len(fronteira_inicial) > 0:
+        plt.scatter(fronteira_inicial[:, 0], fronteira_inicial[:, 1], 
+                color='cyan', s=150, marker='o', label='Geração 1', zorder=10)
+    if len(fronteira_final) > 0:
+        plt.scatter(fronteira_final[:, 0], fronteira_final[:, 1], 
+                color='red', s=150, marker='X', label=f'Geração Final ({NUM_GERACOES})', zorder=10)
+    plt.xlabel('Distância Total (KM)')
+    plt.ylabel('Tempo Total (H)')
+    plt.title('Distância vs Tempo')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+
+    # Gráfico 2: Distância vs Pedágio
+    plt.subplot(2, 2, 2)
+    for i, fronteira in enumerate(historico_plot):
+        if len(fronteira) > 0:
+            plt.scatter(fronteira[:, 0], fronteira[:, 2], color=cores[i], alpha=0.4, s=15)
+    if len(fronteira_inicial) > 0:
+        plt.scatter(fronteira_inicial[:, 0], fronteira_inicial[:, 2], 
+                color='cyan', s=150, marker='o', label='Geração 1', zorder=10)
+    if len(fronteira_final) > 0:
+        plt.scatter(fronteira_final[:, 0], fronteira_final[:, 2], 
+                color='red', s=150, marker='X', label=f'Geração Final ({NUM_GERACOES})', zorder=10)
+    plt.xlabel('Distância Total (KM)')
+    plt.ylabel('Custo Pedágio (R$)')
+    plt.title('Distância vs Pedágio')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+
+    # Gráfico 3: Tempo vs Pedágio
+    plt.subplot(2, 2, 3)
+    for i, fronteira in enumerate(historico_plot):
+        if len(fronteira) > 0:
+            plt.scatter(fronteira[:, 1], fronteira[:, 2], color=cores[i], alpha=0.4, s=15)
+    if len(fronteira_inicial) > 0:
+        plt.scatter(fronteira_inicial[:, 1], fronteira_inicial[:, 2], 
+                color='cyan', s=150, marker='o', label='Geração 1', zorder=10)
+    if len(fronteira_final) > 0:
+        plt.scatter(fronteira_final[:, 1], fronteira_final[:, 2], 
+                color='red', s=150, marker='X', label=f'Geração Final ({NUM_GERACOES})', zorder=10)
+    plt.xlabel('Tempo Total (H)')
+    plt.ylabel('Custo Pedágio (R$)')
+    plt.title('Tempo vs Pedágio')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+
+    # Gráfico 4: Evolução do tamanho da fronteira de Pareto
+    plt.subplot(2, 2, 4)
+    tamanhos_fronteiras = [len(fronteira) for fronteira in historico_plot]
+    geracoes = range(1, len(tamanhos_fronteiras) + 1)
+    plt.plot(geracoes, tamanhos_fronteiras, 'b-', linewidth=2, marker='o', markersize=4)
+    plt.xlabel('Geração')
+    plt.ylabel('Tamanho da Fronteira')
+    plt.title('Evolução do Tamanho da Fronteira de Pareto')
+    plt.grid(True, alpha=0.3)
+
+    plt.tight_layout()
+    plt.savefig('analise_pareto_2d.png')
+
+    print("\n--- ANÁLISE ESTATÍSTICA DA FRONTEIRA FINAL ---")
+    if len(fronteira_final) > 0:
+        print(f"Total de soluções na fronteira: {len(fronteira_final)}")
+        print(f"Distância: Min={fronteira_final[:, 0].min():.2f}KM, Max={fronteira_final[:, 0].max():.2f}KM")
+        print(f"Tempo: Min={fronteira_final[:, 1].min():.2f}H, Max={fronteira_final[:, 1].max():.2f}H")
+        print(f"Pedágio: Min={fronteira_final[:, 2].min():.2f}R$, Max={fronteira_final[:, 2].max():.2f}R$")
     plt.show()
